@@ -1,65 +1,76 @@
-# pkg-rpm-time-services
+<!--
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause
+-->
+# Package branch — CentOS 10 Stream (`c10s`)
 
-RPM packaging for [`quic/time-services`](https://github.com/quic/time-services)
-— the Qualcomm time daemon that synchronises time from the modem to the
-applications processor and maintains time offsets across reboots, once set
-from any source.
+**This is the branch you work on.** It holds the `time-services` RPM's spec
+file and `sources` pointer, plus the CI workflows that build and publish them.
 
-This repo builds and publishes the `time-services` RPM via the shared
-[`qualcomm-linux/qcom-rpm-utils`](https://github.com/qualcomm-linux/qcom-rpm-utils)
-reusable workflows — it follows the same one-package-per-repo template used
-across `qualcomm-linux/pkg-rpm-*`, and mirrors the Debian/Ubuntu packaging in
-[`qualcomm-linux/pkg-time-services`](https://github.com/qualcomm-linux/pkg-time-services)
-(dedicated `rtc` service user, `CAP_SYS_TIME` systemd unit, udev rule for
-`/dev/rtc0`).
+Following the Fedora/CentOS **dist-git** convention, each distro stream gets its
+own branch, and the packaging files live at the branch root:
+
+| Branch | Stream | Contents |
+|---|---|---|
+| `main` | — | Template docs, onboarding guide, community files. Nothing is built here. |
+| **`c10s`** | CentOS 10 Stream | **This branch.** `time-services.spec` + `sources` + workflows. |
+
+Full onboarding guide, configuration reference, and troubleshooting live on
+[`main`](../../tree/main) — see its `README.md` and `docs/workflows.md`.
 
 ---
 
-## Package contents
+## Layout
 
-| File | Purpose |
-|---|---|
-| [`time-services.spec`](time-services.spec) | RPM spec for `time-services`. Builds via autotools (`autoreconf` + `%configure`), installs the `time_daemon` binary plus a `systemd` unit, `sysusers.d` entry, and `udev` rule generated inline in `%install`. |
-| [`sources`](sources) | dist-git checksum pointer for the upstream `v0.1.2` release tarball (SHA512). The tarball itself is never committed — see [`docs/workflows.md`](docs/workflows.md) for the lookaside-cache model. |
+```
+time-services.spec       # RPM spec for quic/time-services
+sources                  # dist-git checksum pointer for the v0.1.2 release tarball
+.github/workflows/       # build-on-pr.yml, pkg-release.yml
+```
+
+This RPM packages [`quic/time-services`](https://github.com/quic/time-services)
+— the Qualcomm time daemon that synchronises time from the modem to the
+applications processor and maintains time offsets across reboots. It mirrors
+the Debian/Ubuntu packaging in
+[`qualcomm-linux/pkg-time-services`](https://github.com/qualcomm-linux/pkg-time-services):
+a dedicated `rtc` service user, a `CAP_SYS_TIME` systemd unit, and a udev rule
+for `/dev/rtc0`, all generated inline in the spec's `%install` section.
 
 > **Known gap:** `time-services` hard-depends on `qmi-framework`
-> (`pkgconfig(qmi-framework)` in the spec). No RPM/dnf-repo for `qmi-framework`
-> exists yet anywhere in `qualcomm-linux` (only Debian packaging in
-> [`pkg-qmi-framework`](https://github.com/qualcomm-linux/pkg-qmi-framework)).
-> Builds here will fail at `dnf builddep` until a `qmi-framework` RPM is
-> published and registered via the `extra-repo` input on
-> [`build-on-pr.yml`](.github/workflows/build-on-pr.yml) /
-> [`pkg-release.yml`](.github/workflows/pkg-release.yml).
+> (`BuildRequires: pkgconfig(qmi-framework)`). A qmi-framework RPM is now built
+> and released from
+> [`qualcomm-linux/pkg-rpm-qmi-framework`](https://github.com/qualcomm-linux/pkg-rpm-qmi-framework)
+> (`c10s` branch) — confirm its Artifactory dnf repo is reachable (registered
+> via the `extra-repo` input on the workflows below) before relying on a clean
+> `dnf builddep` here.
 
-## Updating the package version
+---
+
+## Getting started
+
+### Update the version
+
+Two edits, every time:
 
 1. Bump `Version:` in [`time-services.spec`](time-services.spec) (and the
    `Source0:` URL if the upstream release layout changed).
-2. Recompute the checksum for the new release tarball:
+2. Recompute the checksum:
    ```bash
    sha512sum --tag time-services-<newversion>.tar.gz > sources
    ```
-3. Commit the spec + `sources`, open a PR (`build-on-pr` verifies the tarball
-   and builds it), merge, then run **Release**. The first release fetches the
-   new upstream tarball, verifies it, and caches it back to Artifactory
-   automatically.
 
----
+Commit both, open a PR against this branch, merge, then run **Release**. The
+first release fetches the new upstream tarball, verifies it, and caches it back
+automatically.
 
-## CI: build on PR, release on demand
+### Open a PR
 
-| Workflow | Trigger | Purpose |
-|---|---|---|
-| [`build-on-pr.yml`](.github/workflows/build-on-pr.yml) | Pull request | Build the RPM so reviewers confirm the package still builds. Read-only — never publishes. |
-| [`pkg-release.yml`](.github/workflows/pkg-release.yml) | Manual (`workflow_dispatch`) | Build **and** publish the RPM to Artifactory, behind an approval gate. |
+`build-on-pr` fetches the tarball (from the lookaside cache, or from the spec's
+`Source` URL on a cache miss), verifies the checksum, and builds the RPM.
+Download it from the run's **Artifacts**.
 
-Both delegate to reusable workflows in `qcom-rpm-utils`, which run `rpmbuild`
-inside the prebuilt `rpm-builder` container image. Required repo configuration
-(`CACHE_BASE_URL` variable, `ARTIFACTORY_ACCESS_TOKEN` secret,
-`pkg-release-approval` environment, runner pool access) is documented in full
-in [`docs/workflows.md`](docs/workflows.md), along with the dist-git
-sources/lookaside-cache model and a troubleshooting table.
+### Release
 
-This repo was created from [`qualcomm-linux/pkg-rpm-template`](https://github.com/qualcomm-linux/pkg-rpm-template);
-see that template's README if you're onboarding a *different* package and
-want the generic step-by-step instructions.
+**Actions → Release → Run workflow**, selecting this branch. A reviewer
+approves the `pkg-release-approval` gate, then the RPM publishes to
+Artifactory.
