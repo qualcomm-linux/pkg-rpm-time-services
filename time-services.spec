@@ -2,6 +2,7 @@ Name:           time-services
 Version:        0.1.2
 Release:        1%{?dist}
 Summary:        Qualcomm time daemon
+# noop: verifying build-on-pr.yml pull_request_target trigger on c10s
 
 License:        BSD-3-Clause
 URL:            https://github.com/quic/time-services
