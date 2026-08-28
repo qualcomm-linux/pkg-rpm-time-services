@@ -20,6 +20,9 @@ name: Build on PR
 
 on:
   pull_request_target:
+    branches:
+      - main
+      - c10s
     paths-ignore:
       - '**/*.md'
 
