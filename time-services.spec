@@ -14,10 +14,6 @@ BuildRequires:  automake
 BuildRequires:  libtool
 BuildRequires:  pkgconfig
 BuildRequires:  pkgconfig(glib-2.0)
-# Known gap: no RPM/dnf-repo for qmi-framework exists yet in the
-# qualcomm-linux org (only Debian packaging in pkg-qmi-framework). dnf
-# builddep will fail to resolve this until a qmi-framework RPM is published
-# and registered via this workflow's `extra-repo` input.
 BuildRequires:  pkgconfig(qmi-framework)
 BuildRequires:  systemd-rpm-macros
 
